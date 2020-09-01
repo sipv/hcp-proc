@@ -40,12 +40,17 @@ rule dwi2response:
         csf="run/{s}/response_csf.txt"
     shell: "dwi2response dhollander {input} {output.wm} {output.gm} {output.csf}"
 
+rule avg_response:
+    input: expand("run/{s}/response_{{tissue}}.txt", s=SUBJECTS)
+    output: "run/group/response_{tissue}.txt"
+    shell: "responsemean {input} {output}"
+
 rule dwi2fod:
     input:
         dwi="run/{s}/dwi.mif",
-        resp_wm="run/{s}/response_wm.txt",
-        resp_gm="run/{s}/response_gm.txt",
-        resp_csf="run/{s}/response_csf.txt",
+        resp_wm="run/group/response_wm.txt",
+        resp_gm="run/group/response_gm.txt",
+        resp_csf="run/group/response_csf.txt",
         mask="data/Diffusion/{s}/T1w/Diffusion/nodif_brain_mask.nii.gz"
     output:
         fod_wm="run/{s}/fod_wm.mif",
