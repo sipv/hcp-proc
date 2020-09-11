@@ -30,7 +30,8 @@ rule dwi_convert:
         bvecs="data/Diffusion/{s}/T1w/Diffusion/bvecs",
         bvals="data/Diffusion/{s}/T1w/Diffusion/bvals"
     output: "run/{s}/dwi.mif"
-    shell: "mrconvert {input.data} -fslgrad {input.bvecs} {input.bvals} -datatype float32 -strides 0,0,0,1 {output[0]}"
+    threads: 4
+    shell: "mrconvert {input.data} -fslgrad {input.bvecs} {input.bvals} -datatype float32 -strides 0,0,0,1 {output[0]} -nthreads {threads}"
 
 rule dwi2response:
     input: "run/{s}/dwi.mif"
@@ -38,7 +39,8 @@ rule dwi2response:
         wm="run/{s}/response_wm.txt",
         gm="run/{s}/response_gm.txt",
         csf="run/{s}/response_csf.txt"
-    shell: "dwi2response dhollander {input} {output.wm} {output.gm} {output.csf}"
+    threads: 4
+    shell: "dwi2response dhollander {input} {output.wm} {output.gm} {output.csf} -nthreads {threads}"
 
 rule avg_response:
     input: expand("run/{s}/response_{{tissue}}.txt", s=SUBJECTS)
@@ -56,10 +58,11 @@ rule dwi2fod:
         fod_wm="run/{s}/fod_wm.mif",
         fod_gm="run/{s}/fod_gm.mif",
         fod_csf="run/{s}/fod_csf.mif"
+    threads: 4
     shell:
         "dwi2fod msmt_csd {input.dwi}"
         "    {input.resp_wm} {output.fod_wm} {input.resp_gm} {output.fod_gm} {input.resp_csf} {output.fod_csf}"
-        "    -mask {input.mask} -nthreads 4"
+        "    -mask {input.mask} -nthreads {threads}"
 
 rule tckgen:
     input:
@@ -67,16 +70,18 @@ rule tckgen:
         mask="data/Diffusion/{s}/T1w/Diffusion/nodif_brain_mask.nii.gz",
     output:
         tracks="run/{s}/tracks_all.tck"
+    threads: 4
     shell:
         "tckgen {input.fod_wm} {output.tracks} -algorithm iFOD2 -mask {input.mask} -seed_image {input.mask}"
-        "    -select {NTRACKS} -nthreads 4"
+        "    -select {NTRACKS} -nthreads {threads}"
 
 rule sift:
     input:
         tracks="run/{s}/tracks_all.tck",
         fod_wm="run/{s}/fod_wm.mif"
     output: "run/{s}/tracks_sifted.tck",
-    shell: "tcksift {input.tracks} {input.fod_wm} {output} -nthreads 4"
+    threads: 4
+    shell: "tcksift {input.tracks} {input.fod_wm} {output} -nthreads {threads}"
 
 rule labels:
     input:
