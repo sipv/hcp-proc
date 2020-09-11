@@ -2,6 +2,7 @@
 import sys
 
 import numpy as np
+import scipy.stats as stats
 import nibabel as nib
 
 dict_subcort = {
@@ -23,6 +24,15 @@ def translate(name, group):
     else:
         raise ValueError("Unexpected group {group}")
 
+def regress_mean(x):
+    nreg, nt = x.shape
+    mean = np.mean(x, axis=0)
+    xr = np.zeros_like(x)
+    for i in range(nreg):
+        a, b, rval, pval, stderr = stats.linregress(mean, x[i])
+        xr[i] = x[i] - (a*mean + b)
+    return xr
+
 
 def merge_fmri(ptseries_cort_file, ptseries_subcort_file, target_regions_file, outfile):
 
@@ -41,6 +51,12 @@ def merge_fmri(ptseries_cort_file, ptseries_subcort_file, target_regions_file, o
     for i, region in enumerate(target_regions):
         ind = regions.index(region)
         data[i, :] = pdata[ind]
+
+    # Regress and normalize
+    # data = regress_mean(data)
+    # data -= np.mean(data, axis=0)
+    data -= np.mean(data, axis=1)[:, None]
+    data /= np.std(data, axis=1)[:, None]
 
     # Save
     np.savez(outfile, data=data)
