@@ -34,7 +34,7 @@ def regress_mean(x):
     return xr
 
 
-def merge_fmri(ptseries_cort_file, ptseries_subcort_file, target_regions_file, outfile):
+def join_cort_subcort(ptseries_cort_file, ptseries_subcort_file, target_regions_file, outfile):
 
     # Existing data
     ptseries_cort    = nib.load(ptseries_cort_file)
@@ -52,20 +52,56 @@ def merge_fmri(ptseries_cort_file, ptseries_subcort_file, target_regions_file, o
         ind = regions.index(region)
         data[i, :] = pdata[ind]
 
-    # Regress and normalize
-    # data = regress_mean(data)
-    # data -= np.mean(data, axis=0)
+    # Normalize and save
     data -= np.mean(data, axis=1)[:, None]
     data /= np.std(data, axis=1)[:, None]
-
-    # Save
     np.savez(outfile, data=data)
 
 
-if __name__ == "__main__":
-    ptseries_cort = sys.argv[1]
-    ptseries_subcort = sys.argv[2]
-    target_regions_file = sys.argv[3]
-    outfile = sys.argv[4]
+def gsr(infile, outfile):
+    data = np.load(infile)['data']
+    data = regress_mean(data)
 
-    merge_fmri(ptseries_cort, ptseries_subcort, target_regions_file, outfile)
+    # Normalize and save
+    data -= np.mean(data, axis=1)[:, None]
+    data /= np.std(data, axis=1)[:, None]
+    np.savez(outfile, data=data)
+
+
+def split_fmri(infile, outfiles):
+    n = len(outfiles)
+    data = np.load(infile)['data']
+    nreg, ntall = data.shape
+    nt = ntall // n
+
+    for i in range(n):
+        # Split, normalize, and save
+        data_split = data[:, i*nt:(i+1)*nt]
+        data_split -= np.mean(data_split, axis=1)[:, None]
+        data_split /= np.std(data_split, axis=1)[:, None]
+        np.savez(outfiles[i], data=data_split)
+
+
+if __name__ == "__main__":
+    _ = sys.argv.pop(0)
+    cmd = sys.argv.pop(0)
+
+    if cmd == "join_cort_subcort":
+        ptseries_cort = sys.argv[0]
+        ptseries_subcort = sys.argv[1]
+        target_regions_file = sys.argv[2]
+        outfile = sys.argv[3]
+        join_cort_subcort(ptseries_cort, ptseries_subcort, target_regions_file, outfile)
+
+    elif cmd == "gsr":
+        infile = sys.argv[0]
+        outfile = sys.argv[1]
+        gsr(infile, outfile)
+
+    elif cmd == "split":
+        infile = sys.argv[0]
+        outfiles = sys.argv[1].split(' ')
+        split_fmri(infile, outfiles)
+
+    else:
+        raise ValueError(f"Unexpected command '{cmd}'")
