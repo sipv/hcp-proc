@@ -24,7 +24,6 @@ localrules: unzip
 
 rule unzip:
     input: "data/{s}_{package}.zip"
-    # output: temp(directory("run/{s}/data/{package}"))
     output: directory("run/{s}/data/{package}")
     shell: """
         unzip -qq {input} -d run/{wildcards.s}/data/{wildcards.package}     && \
@@ -157,6 +156,12 @@ rule get_timeseries:
         "ln -sr {input}/MNINonLinear/Results/rfMRI_REST2_RL/rfMRI_REST2_RL_Atlas_MSMAll_hp2000_clean.dtseries.nii {output.rl2};"
 
 
+rule get_movement_regressors:
+    input: "data/{s}_3T_rfMRI_REST{ses}_preproc.zip"
+    output: "run/{s}/rfmri/Movement_Regressors_REST{ses}_{pe}.txt"
+    shell: "unzip -p {input} {wildcards.s}/MNINonLinear/Results/rfMRI_REST{ses}_{pe}/Movement_Regressors.txt > {output}"
+
+
 rule concat_fmri:
     input:
         lr1="run/{s}/rfmri/rfMRI_REST1-LR_orig.dtseries.nii",
@@ -182,7 +187,7 @@ rule remove_session_effects:
 rule dicer:
     input:
         rest_nifti="run/{s}/rfmri/rfMRI_ALLFILT.nii.gz"
-    output: directory("run/{s}/rfmri/dicer")
+    output: temp(directory("run/{s}/rfmri/dicer"))
     resources:
         mem_mb=20000
     shell: """
@@ -191,6 +196,15 @@ rule dicer:
         d=$PWD; cd $DICERPATH;          \
         bash DiCER_lightweight.sh -f -i `basename {input}` -w $d/{output} -s {wildcards.s} -p 5
     """
+
+
+rule get_dicer_results:
+    input:  "run/{s}/rfmri/dicer"
+    output: directory("run/{s}/rfmri/dicer-results")
+    shell:
+        "mkdir {output};"
+        "cp {input}/*.{{png,html,css}} {output}/;"
+        "cp {input}/{wildcards.s}_dbscan_liberal_regressors.tsv {output}/;"
 
 
 rule dicer_to_cifti:
@@ -239,5 +253,7 @@ rule export:
 
 rule fmri:
     input:
+        expand("run/{s}/rfmri/dicer-results/", s=SUBJECTS),
         expand("run/{s}/res_{conf}/rfMRI_{ses}_{var}.npz", s=SUBJECTS, conf=CONFS, \
-               ses=['REST1-LR', 'REST1-RL', 'REST2-LR', 'REST2-RL'], var=['orig', 'gsr', 'dicer'])
+               ses=['REST1-LR', 'REST1-RL', 'REST2-LR', 'REST2-RL'], var=['orig', 'gsr', 'dicer']),
+        expand("run/{s}/rfmri/Movement_Regressors_REST{ses}_{pe}.txt", s=SUBJECTS, ses=['1', '2'], pe=['LR', 'RL'])
