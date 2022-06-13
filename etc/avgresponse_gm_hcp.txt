@@ -1,0 +1,5 @@
+# command_history: /home/vsip/soft/mrtrix3/bin/responsemean run/103818/response_gm.txt run/101107/response_gm.txt run/100307/response_gm.txt run/100408/response_gm.txt run/101309/response_gm.txt run/103414/response_gm.txt run/103111/response_gm.txt run/101915/response_gm.txt run/group/response_gm.txt  (version=3.0.1)
+16977.457959153307456
+7792.259074918489205
+4171.872152203237420
+2599.026747062255708

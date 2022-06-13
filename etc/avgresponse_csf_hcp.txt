@@ -1,0 +1,5 @@
+# command_history: /home/vsip/soft/mrtrix3/bin/responsemean run/103818/response_csf.txt run/101107/response_csf.txt run/100307/response_csf.txt run/100408/response_csf.txt run/101309/response_csf.txt run/103414/response_csf.txt run/103111/response_csf.txt run/101915/response_csf.txt run/group/response_csf.txt  (version=3.0.1)
+47860.827860015015176
+2875.133683738650689
+1380.307871892646290
+1337.211547521946841
