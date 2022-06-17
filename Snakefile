@@ -37,7 +37,7 @@ rule dwi_convert:
         bvecs="data/{s}/T1w/Diffusion/bvecs",
         bvals="data/{s}/T1w/Diffusion/bvals"
     output: temp("run/{s}/diff/dwi.mif")
-    threads: 4
+    threads: 8
     shell:
         "mrconvert {input.data} -fslgrad {input.bvecs} {input.bvals}"
         "    -datatype float32 -strides 0,0,0,1 {output[0]} -nthreads {threads}"
@@ -49,7 +49,7 @@ rule dwi2response:
         wm="run/{s}/diff/response_wm.txt",
         gm="run/{s}/diff/response_gm.txt",
         csf="run/{s}/diff/response_csf.txt"
-    threads: 4
+    threads: 8
     shell: "dwi2response dhollander {input} {output.wm} {output.gm} {output.csf} -nthreads {threads}"
 
 
@@ -70,7 +70,7 @@ rule dwi2fod:
         fod_wm =temp("run/{s}/diff/fod_wm.mif"),
         fod_gm =temp("run/{s}/diff/fod_gm.mif"),
         fod_csf=temp("run/{s}/diff/fod_csf.mif")
-    threads: 4
+    threads: 8
     shell:
         "dwi2fod msmt_csd {input.dwi}"
         "    {input.resp_wm} {output.fod_wm} {input.resp_gm} {output.fod_gm} {input.resp_csf} {output.fod_csf}"
@@ -83,7 +83,9 @@ rule tckgen:
         brainmask="data/{s}/T1w/Diffusion/nodif_brain_mask.nii.gz"
     output:
         tracks=temp("run/{s}/diff/tracks_all.tck")
-    threads: 4
+    resources:
+        mem_mb=24000
+    threads: 8
     shell:
         "tckgen {input.fod_wm} {output.tracks} -algorithm iFOD2"
         "    -mask       {input.brainmask}"
@@ -96,7 +98,9 @@ rule sift:
         tracks="run/{s}/diff/tracks_all.tck",
         fod_wm="run/{s}/diff/fod_wm.mif"
     output: "run/{s}/diff/tracks_sifted.tck"
-    threads: 4
+    resources:
+        mem_mb=24000
+    threads: 8
     shell: "tcksift {input.tracks} {input.fod_wm} {output} -nthreads {threads}"
 
 
@@ -113,8 +117,9 @@ rule conn:
     input:
         tracks="run/{s}/diff/tracks_sifted.tck",
         labels="run/{s}/diff/labels.{conf}.nii.gz",
-    output: "run/{s}/res_{conf}/weights.txt",
-    shell: "tck2connectome {input.tracks} {input.labels} {output} -symmetric -zero_diagonal"
+    output: "run/{s}/res_{conf}/weights.txt"
+    threads: 8
+    shell: "tck2connectome {input.tracks} {input.labels} {output} -symmetric -zero_diagonal -nthreads {threads}"
 
 
 rule region_list:
@@ -171,7 +176,7 @@ rule remove_session_effects:
     input: "run/{s}/rfmri/rfMRI_ALL.nii.gz"
     output: temp("run/{s}/rfmri/rfMRI_ALLFILT.nii.gz")
     resources:
-        mem_mb=20000
+        mem_mb=24000
     shell: "fsl_regfilt -i {input} -d {DICERPATH}/hcp_processing/restStopPoints.tsv -f 1,2,3,4 -o {output}"
 
 
@@ -180,7 +185,7 @@ rule dicer:
         rest_nifti="run/{s}/rfmri/rfMRI_ALLFILT.nii.gz"
     output: temp(directory("run/{s}/rfmri/dicer"))
     resources:
-        mem_mb=20000
+        mem_mb=24000
     shell: """
         mkdir {output};                 \
         ln -sr {input} {output};        \
